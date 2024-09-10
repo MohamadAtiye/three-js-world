@@ -1,0 +1,54 @@
+import React from "react";
+import { Canvas } from "@react-three/fiber";
+import SkySphere from "./components/SkySphere";
+import { GroundPlane } from "./components/GroundPlane";
+import { GameProvider } from "./gameContext/GameContext";
+import GameCamera from "./components/GameCamera";
+import Player from "./components/Player";
+
+export default function GamePage() {
+  console.log("render game");
+
+  return (
+    <GameProvider>
+      <Canvas style={{ height: "100vh", backgroundColor: "black" }}>
+        {/* CAMERA */}
+        <GameCamera />
+
+        {/* PLAYER */}
+        <Player />
+
+        {/* Ground Plane */}
+        <GroundPlane />
+
+        {/* Sky Sphere */}
+        <SkySphere />
+
+        {/* SOME BOXES */}
+        <mesh position={[5, 0.5, 0]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="red" />
+        </mesh>
+
+        <mesh position={[-5, 0.5, 0]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+
+        <mesh position={[0, 0.5, 5]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="yellow" />
+        </mesh>
+        <mesh position={[0, 0.5, 3]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="yellow" />
+        </mesh>
+
+        <mesh position={[0, 0.5, -5]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="cyan" />
+        </mesh>
+      </Canvas>
+    </GameProvider>
+  );
+}
