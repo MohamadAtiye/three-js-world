@@ -3,7 +3,6 @@ import { Canvas } from "@react-three/fiber";
 import SkySphere from "./components/SkySphere";
 import { GroundPlane } from "./components/GroundPlane";
 import { GameProvider } from "./gameContext/GameContext";
-import GameCamera from "./components/GameCamera";
 import Player from "./components/Player";
 
 export default function GamePage() {
@@ -12,10 +11,7 @@ export default function GamePage() {
   return (
     <GameProvider>
       <Canvas style={{ height: "100vh", backgroundColor: "black" }}>
-        {/* CAMERA */}
-        <GameCamera />
-
-        {/* PLAYER */}
+        {/* PLAYER and CAMERA */}
         <Player />
 
         {/* Ground Plane */}

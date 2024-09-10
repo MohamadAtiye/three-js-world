@@ -1,20 +1,23 @@
 import React, { createContext, useEffect, useRef } from "react";
+import { Vector3 } from "three";
 
 interface GameContextProps {
   playerPos: [number, number, number];
   playerDir: [number, number, number];
-  keyMap: Record<string, boolean>;
+  velocity: Vector3;
 }
 
 const GameContext = createContext<GameContextProps>({
   playerPos: [0, 1, 0],
   playerDir: [0, 0, -1],
-  keyMap: {},
+  velocity: new Vector3(0, 0, 0),
 });
 
 export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const playerPos = useRef<[number, number, number]>([0, 1, 0]);
   const playerDir = useRef<[number, number, number]>([0, 0, 1]);
+  const velocity = useRef(new Vector3(0, 0, 0));
+
   const gameControls = useRef({
     pointerLocked: false,
   });
@@ -33,14 +36,40 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // handle player movement
-  const keyMap = useRef<Record<string, boolean>>({});
-  const onDocumentKey = (e: KeyboardEvent) => {
-    console.log(e.code, e.type);
-    if (!gameControls.current.pointerLocked) return;
-    keyMap.current[e.code] = e.type === "keydown";
-  };
-
   useEffect(() => {
+    const v = velocity.current;
+    const onDocumentKey = (event: KeyboardEvent) => {
+      if (!gameControls.current.pointerLocked) return;
+      console.log(event.code, event.type);
+      if (event.type === "keydown") {
+        if (event.key === "w") {
+          v.z = 1;
+        }
+        if (event.key === "s") {
+          v.z = -1;
+        }
+        if (event.key === "a") {
+          v.x = 1;
+        }
+        if (event.key === "d") {
+          v.x = -1;
+        }
+      } else if (event.type === "keyup") {
+        if (event.key === "w" && v.z === 1) {
+          v.z = 0;
+        }
+        if (event.key === "s" && v.z === -1) {
+          v.z = 0;
+        }
+        if (event.key === "a" && v.x === 1) {
+          v.x = 0;
+        }
+        if (event.key === "d" && v.x === -1) {
+          v.x = 0;
+        }
+      }
+    };
+
     document.addEventListener("keydown", onDocumentKey);
     document.addEventListener("keyup", onDocumentKey);
 
@@ -55,7 +84,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         playerPos: playerPos.current,
         playerDir: playerDir.current,
-        keyMap: keyMap.current,
+        velocity: velocity.current,
       }}
     >
       {children}
