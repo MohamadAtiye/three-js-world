@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGame } from "../gameContext/useGame";
 import { PointerLockControls } from "@react-three/drei";
+import { GRAVITY, GROUND_LEVEL } from "../constants";
 
 const SPEED = 0.1;
 const MIN_PITCH = THREE.MathUtils.degToRad(-60); // Minimum pitch in radians (e.g., -60 degrees)
@@ -11,7 +12,7 @@ const MAX_PITCH = THREE.MathUtils.degToRad(60); // Maximum pitch in radians (e.g
 const TOUCH_SENSITIVITY = 0.004;
 
 export default function Player() {
-  const { playerPos, velocity, cameraOffset } = useGame();
+  const { playerPos, velocity, cameraOffset, playerJump } = useGame();
   const capsuleRef = useRef<THREE.Mesh>(null);
 
   // reusable vectors
@@ -37,6 +38,20 @@ export default function Player() {
     camera.quaternion.setFromEuler(cameraEuler);
 
     // ------------------------------------------------------------ update player
+
+    // handle jumping
+    if (playerJump.isJumping) {
+      playerPos.y += playerJump.velocity;
+      playerJump.velocity -= GRAVITY; // Apply gravity
+
+      // Stop jumping when player reaches the ground
+      // TODO: Add collision detection
+      if (playerPos.y <= GROUND_LEVEL) {
+        playerPos.y = GROUND_LEVEL;
+        playerJump.isJumping = false;
+        playerJump.velocity = 0;
+      }
+    }
 
     // limit diagonal magnitude and multiply by speed constant
     const moveVec = moveVecRef.current;
