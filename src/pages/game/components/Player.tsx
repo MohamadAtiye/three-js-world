@@ -87,7 +87,7 @@ export default function Player() {
     }
   });
 
-  // for touch controls
+  // for touch rotation controls
   const { camera, gl } = useThree();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   // Variables for yaw (Y axis rotation) and pitch (X axis rotation)
@@ -96,16 +96,22 @@ export default function Player() {
   useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
       event.preventDefault();
-      if (event.touches.length === 1) {
-        const touch = event.touches[0];
+      const touch = Array.from(event.touches).find(
+        (t) => t.target === event.currentTarget
+      );
+      if (touch) {
+        // const touch = event.touches[0];
         touchStartRef.current = { x: touch.clientX, y: touch.clientY };
       }
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       event.preventDefault();
-      if (touchStartRef.current && event.touches.length === 1) {
-        const touch = event.touches[0];
+      const touch = Array.from(event.touches).find(
+        (t) => t.target === event.currentTarget
+      );
+      if (touchStartRef.current && touch) {
+        // const touch = event.touches[0];
         const deltaX = touch.clientX - touchStartRef.current.x;
         const deltaY = touch.clientY - touchStartRef.current.y;
 
