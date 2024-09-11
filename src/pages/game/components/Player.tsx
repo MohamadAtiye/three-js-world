@@ -11,42 +11,46 @@ const MAX_PITCH = THREE.MathUtils.degToRad(60); // Maximum pitch in radians (e.g
 const TOUCH_SENSITIVITY = 0.004;
 
 export default function Player() {
-  const { playerPos, velocity } = useGame();
+  const { playerPos, velocity, cameraOffset } = useGame();
   const capsuleRef = useRef<THREE.Mesh>(null);
 
+  // reusable vectors
+  const yUpVectorRef = useRef(new THREE.Vector3(0, 1, 0)); // Add this ref at the top
+  const cameraEulerRef = useRef(new THREE.Euler());
+  const moveVecRef = useRef(new THREE.Vector3());
+  const directionRef = useRef(new THREE.Vector3());
+  const moveDirectionRef = useRef(new THREE.Vector3());
+  const crossVecRef = useRef(new THREE.Vector3());
+  const lookAtTargetRef = useRef(new THREE.Vector3());
+  const offsetRef = useRef(new THREE.Vector3(0, 0.5, 2));
+
+  // render Loop to calculate player position and rotation, and camera position
   useFrame(({ camera }) => {
     // ------------------------------------------------------------ HANDLE MIN-MAX CAMERA PITCH AND ADJUST
-    {
-      const currentQuaternion = camera.quaternion.clone();
-      // Extract yaw (rotation around Y) and pitch (rotation around X)
-      const euler = new THREE.Euler().setFromQuaternion(
-        currentQuaternion,
-        "YXZ"
-      );
-      // Limit the pitch (rotation around X axis)
-      euler.x = Math.max(MIN_PITCH, Math.min(MAX_PITCH, euler.x));
-      // Reapply the quaternion based on the new clamped euler angles
-      camera.quaternion.setFromEuler(euler);
-    }
+
+    const cameraEuler = cameraEulerRef.current;
+    // reset the camera euler value
+    cameraEuler.setFromQuaternion(camera.quaternion, "YXZ");
+    // Limit the pitch (rotation around X axis)
+    cameraEuler.x = Math.max(MIN_PITCH, Math.min(MAX_PITCH, cameraEuler.x));
+    // Reapply the quaternion based on the new clamped euler angles
+    camera.quaternion.setFromEuler(cameraEuler);
 
     // ------------------------------------------------------------ update player
 
-    // limit diagonal speed
-    const moveVec = new THREE.Vector3().copy(velocity);
-    const magnitude = Math.sqrt(moveVec.x ** 2 + moveVec.z ** 2);
-
-    // If the magnitude is greater than 1, normalize the vector
-    if (magnitude > 1) {
-      moveVec.x /= magnitude;
-      moveVec.z /= magnitude;
+    // limit diagonal magnitude and multiply by speed constant
+    const moveVec = moveVecRef.current;
+    moveVec.copy(velocity);
+    const magnitudeSquared = moveVec.x ** 2 + moveVec.z ** 2;
+    if (magnitudeSquared > 1) {
+      moveVec.divideScalar(Math.sqrt(magnitudeSquared));
     }
-
-    // multiply move direction by speed
     moveVec.multiplyScalar(SPEED);
 
+    // apply position and rotation to player
     if (capsuleRef.current) {
-      // Get the camera's direction vector
-      const direction = new THREE.Vector3();
+      // get the camera's direction vector
+      const direction = directionRef.current;
       camera.getWorldDirection(direction);
 
       // Prevent movement in the Y axis (no flying)
@@ -54,45 +58,35 @@ export default function Player() {
       direction.normalize();
 
       // Apply the velocity relative to the camera's direction
-      const moveDirection = new THREE.Vector3();
+      const moveDirection = moveDirectionRef.current;
+      const crossVec = crossVecRef.current;
       moveDirection.copy(direction).multiplyScalar(moveVec.z);
-      moveDirection.add(
-        new THREE.Vector3()
-          .crossVectors(new THREE.Vector3(0, 1, 0), direction)
-          .multiplyScalar(moveVec.x)
-      );
 
-      // Update player position
-      playerPos[0] += moveDirection.x;
-      playerPos[1] += moveDirection.y;
-      playerPos[2] += moveDirection.z;
-      capsuleRef.current.position.set(...playerPos);
+      crossVec.crossVectors(yUpVectorRef.current, direction);
+      moveDirection.add(crossVec.multiplyScalar(moveVec.x));
+
+      // Update and Apply player position
+      playerPos.add(moveDirection);
+      capsuleRef.current.position.x = playerPos.x;
+      capsuleRef.current.position.y = playerPos.y;
+      capsuleRef.current.position.z = playerPos.z;
+      // capsuleRef.current.position.copy(playerPos);
 
       // Align the capsule's rotation to match the camera's look direction
-      const lookAtTarget = new THREE.Vector3();
-      lookAtTarget.copy(capsuleRef.current.position).sub(direction);
+      const lookAtTarget = lookAtTargetRef.current;
+      lookAtTarget.x = playerPos.x;
+      lookAtTarget.y = playerPos.y;
+      lookAtTarget.z = playerPos.z;
+      lookAtTarget.sub(direction);
       capsuleRef.current.lookAt(lookAtTarget);
     }
 
     // ------------------------------------------------------------ update camera position
-    {
-      // -- get new camera position
-      const origin = new THREE.Vector3(...playerPos);
-      const offset = new THREE.Vector3(0, 1, 2);
 
-      // Get the camera's rotation in world space from the controls
-      const rotation = new THREE.Euler(
-        camera.rotation.x,
-        camera.rotation.y,
-        camera.rotation.z
-      );
-
-      // Apply the rotation to the offset (rotate the offset around the origin based on the camera's rotation)
-      offset.applyEuler(rotation);
-
-      // Set the camera's position relative to the origin plus the rotated offset
-      camera.position.copy(origin).add(offset);
-    }
+    // Set the camera's position relative to the origin plus the rotated offset
+    const offset = offsetRef.current;
+    offset.copy(cameraOffset).applyEuler(cameraEuler);
+    camera.position.copy(playerPos).add(offset);
   });
 
   // for touch rotation controls

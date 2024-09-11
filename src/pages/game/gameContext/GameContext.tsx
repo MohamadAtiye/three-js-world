@@ -2,21 +2,24 @@ import React, { createContext, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 
 interface GameContextProps {
-  playerPos: [number, number, number];
+  playerPos: Vector3;
   playerDir: [number, number, number];
   velocity: Vector3;
+  cameraOffset: Vector3;
 }
 
 const GameContext = createContext<GameContextProps>({
-  playerPos: [0, 1, 0],
+  playerPos: new Vector3(0, 1, 0),
   playerDir: [0, 0, -1],
   velocity: new Vector3(0, 0, 0),
+  cameraOffset: new Vector3(0, 0.5, 2),
 });
 
 export const GameProvider = ({ children }: { children: React.ReactNode }) => {
-  const playerPos = useRef<[number, number, number]>([0, 1, 0]);
+  const playerPos = useRef<Vector3>(new Vector3(0, 1, 0));
   const playerDir = useRef<[number, number, number]>([0, 0, 1]);
   const velocity = useRef(new Vector3(0, 0, 0));
+  const cameraOffset = useRef(new Vector3(0, 0.5, 2));
 
   const gameControls = useRef({
     pointerLocked: false,
@@ -85,6 +88,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
         playerPos: playerPos.current,
         playerDir: playerDir.current,
         velocity: velocity.current,
+        cameraOffset: cameraOffset.current,
       }}
     >
       {children}
