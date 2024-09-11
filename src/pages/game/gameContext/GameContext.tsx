@@ -11,6 +11,7 @@ interface GameContextProps {
     isJumping: boolean;
     velocity: number;
   };
+  jump: () => void;
 }
 
 const GameContext = createContext<GameContextProps>({
@@ -22,6 +23,7 @@ const GameContext = createContext<GameContextProps>({
     isJumping: false,
     velocity: 0,
   },
+  jump: () => {},
 });
 
 export const GameProvider = ({ children }: { children: React.ReactNode }) => {
@@ -53,6 +55,14 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       );
   }, []);
 
+  const jump = () => {
+    if (!playerJump.current.isJumping && playerPos.current.y <= GROUND_LEVEL) {
+      // Trigger jump when space is pressed and player is on the ground
+      playerJump.current.isJumping = true;
+      playerJump.current.velocity = JUMP_FORCE;
+    }
+  };
+
   // handle player movement
   useEffect(() => {
     const v = velocity.current;
@@ -74,14 +84,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
             v.x = -1;
             break;
           case "Space":
-            if (
-              !playerJump.current.isJumping &&
-              playerPos.current.y <= GROUND_LEVEL
-            ) {
-              // Trigger jump when space is pressed and player is on the ground
-              playerJump.current.isJumping = true;
-              playerJump.current.velocity = JUMP_FORCE;
-            }
+            jump();
             break;
         }
       } else if (event.type === "keyup") {
@@ -117,6 +120,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
         velocity: velocity.current,
         cameraOffset: cameraOffset.current,
         playerJump: playerJump.current,
+        jump,
       }}
     >
       {children}
