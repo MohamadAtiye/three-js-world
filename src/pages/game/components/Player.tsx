@@ -30,11 +30,19 @@ export default function Player() {
     }
 
     // ------------------------------------------------------------ update player
-    const speed = Math.abs(velocity.x) + Math.abs(velocity.z);
-    const relativeSpeed = speed > 1 ? 0.5 * SPEED : 1 * SPEED;
 
-    const move = new THREE.Vector3();
-    move.copy(velocity).multiplyScalar(relativeSpeed);
+    // limit diagonal speed
+    const moveVec = new THREE.Vector3().copy(velocity);
+    const magnitude = Math.sqrt(moveVec.x ** 2 + moveVec.z ** 2);
+
+    // If the magnitude is greater than 1, normalize the vector
+    if (magnitude > 1) {
+      moveVec.x /= magnitude;
+      moveVec.z /= magnitude;
+    }
+
+    // multiply move direction by speed
+    moveVec.multiplyScalar(SPEED);
 
     if (capsuleRef.current) {
       // Get the camera's direction vector
@@ -47,11 +55,11 @@ export default function Player() {
 
       // Apply the velocity relative to the camera's direction
       const moveDirection = new THREE.Vector3();
-      moveDirection.copy(direction).multiplyScalar(move.z);
+      moveDirection.copy(direction).multiplyScalar(moveVec.z);
       moveDirection.add(
         new THREE.Vector3()
           .crossVectors(new THREE.Vector3(0, 1, 0), direction)
-          .multiplyScalar(move.x)
+          .multiplyScalar(moveVec.x)
       );
 
       // Update player position
