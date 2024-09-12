@@ -12,6 +12,8 @@ const StyledButton = styled.button`
   cursor: pointer;
   font-size: 16px;
   transition: transform 0.2s ease, background-color 0.1s ease;
+  touch-action: none;
+  user-select: none;
 
   &:active {
     transform: scale(0.95);
@@ -20,18 +22,17 @@ const StyledButton = styled.button`
 `;
 
 export default function DPad() {
-  const { velocity, playerJump, playerPos, jump } = useGame();
+  const { velocity, jump } = useGame();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0.1);
+  const dpadRef = useRef<HTMLDivElement>(null);
 
-  const isMoving = useRef(false);
-
+  ////////////////////// -- d-pad common logic
   useEffect(() => {
     const { x, y } = position;
     velocity.z = Math.min(Math.max(y, -1), 1);
     velocity.x = Math.min(Math.max(-x, -1), 1);
 
-    // Calculate the magnitude of the velocity vector
     const magnitudeSquared = velocity.x ** 2 + velocity.z ** 2;
     if (magnitudeSquared > 1) {
       velocity.divideScalar(Math.sqrt(magnitudeSquared));
@@ -45,8 +46,44 @@ export default function DPad() {
     setPosition({ x, y });
   };
 
+  const handleEnd = () => {
+    setPosition({ x: 0, y: 0 });
+    velocity.set(0, 0, 0);
+    setOpacity(0.1);
+  };
+
+  ////////////////////// -- d-pad mouse logic
+  const handleMouseStart = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setOpacity(1);
+    if ("clientX" in event) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+  };
+
+  const handleMouseMove = (event: MouseEvent) => {
+    if (dpadRef.current) {
+      const rect = dpadRef.current.getBoundingClientRect();
+      handleMove(event.clientX, event.clientY, rect);
+    }
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  ////////////////////// -- d-pad touch logic
+  const handleTouchStart = (event: React.TouchEvent) => {
+    // event.preventDefault(); // Prevent default touch actions
+    event.stopPropagation();
+    setOpacity(1);
+  };
+
   const handleTouchMove = (event: React.TouchEvent) => {
-    if (!isMoving.current) return;
+    // event.preventDefault(); // Prevent default touch actions
     const touch = Array.from(event.touches).find(
       (t) => t.target === event.currentTarget
     );
@@ -56,26 +93,17 @@ export default function DPad() {
     }
   };
 
-  const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isMoving.current) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    handleMove(event.clientX, event.clientY, rect);
+  ////////////////////// -- jump logic
+  const isJumpDown = useRef(false);
+  const handleJumpDown = () => {
+    isJumpDown.current = true;
   };
+  const handleJumpClick = (
+    event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent
+  ) => {
+    if (!isJumpDown.current) return;
+    isJumpDown.current = false;
 
-  const handleEnd = () => {
-    setPosition({ x: 0, y: 0 });
-    velocity.set(0, 0, 0);
-    setOpacity(0.1);
-    isMoving.current = false;
-  };
-
-  const handleStart = (event: React.TouchEvent | React.MouseEvent) => {
-    event.stopPropagation();
-    isMoving.current = true;
-    setOpacity(1);
-  };
-
-  const handleJumpClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     jump();
   };
@@ -101,9 +129,11 @@ export default function DPad() {
           zIndex: 10,
           opacity: opacity,
           transition: "opacity 0.2s ease-in-out",
+          touchAction: "none", // Ensure touch events don't interfere
         }}
       >
         <div
+          ref={dpadRef}
           style={{
             height: "min(50vw,300px)",
             width: "min(50vw,300px)",
@@ -112,13 +142,12 @@ export default function DPad() {
             touchAction: "none",
             position: "relative",
           }}
+          onContextMenu={(e) => e.preventDefault()}
           onClick={(e) => e.stopPropagation()}
-          onTouchStart={handleStart}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleEnd}
-          onMouseDown={handleStart}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleEnd}
+          onMouseDown={handleMouseStart}
         >
           <div style={{ ...innerCircleStyle, pointerEvents: "none" }} />
         </div>
@@ -130,9 +159,17 @@ export default function DPad() {
           bottom: "20px",
           right: "20px",
           zIndex: 10,
+          touchAction: "none", // Ensure touch events don't interfere
         }}
       >
-        <StyledButton onClick={handleJumpClick}>
+        <StyledButton
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          onMouseDown={handleJumpDown}
+          onMouseUp={handleJumpClick}
+          onTouchStart={handleJumpDown}
+          onTouchEnd={handleJumpClick}
+        >
           Jump
           <br />
           <span style={{ fontSize: "10px" }}>Space</span>
