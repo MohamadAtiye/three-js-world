@@ -84,7 +84,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     const v = velocity.current;
     const onDocumentKey = (event: KeyboardEvent) => {
       if (!gameControls.current.pointerLocked) return;
-      console.log(event.code, event.type);
       if (event.type === "keydown") {
         switch (event.code) {
           case "KeyW":

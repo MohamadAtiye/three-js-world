@@ -134,17 +134,15 @@ export default function Player() {
     };
 
     const onDocumentMouseWheel = (event: WheelEvent) => {
-      event.preventDefault();
+      if (event.target !== gl.domElement) return;
       handleCameraChange(event.deltaY);
     };
 
     const handleTouchStart = (event: TouchEvent) => {
       event.preventDefault();
-      console.log("touch start", event.touches);
 
       // check 2 fingers on this canvas for pinching
       if (isPinch(event)) {
-        console.log("is pinch");
         initialPinchDistance = getTouchDistance(event.touches);
         return;
       }
