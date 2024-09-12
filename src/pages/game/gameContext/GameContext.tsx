@@ -1,6 +1,12 @@
 import React, { createContext, useEffect, useRef } from "react";
 import { Vector3 } from "three";
-import { GROUND_LEVEL, JUMP_FORCE } from "../constants";
+import {
+  DEFAULT_CAMERA_OFFSET,
+  GROUND_LEVEL,
+  JUMP_FORCE,
+  MAX_CAMERA_MULTIPLIER,
+  MIN_CAMERA_MULTIPLIER,
+} from "../constants";
 
 interface GameContextProps {
   playerPos: Vector3;
@@ -12,6 +18,10 @@ interface GameContextProps {
     velocity: number;
   };
   jump: () => void;
+  gameControls: {
+    pointerLocked: boolean;
+    cameraOffsetMultiplier: number;
+  };
 }
 
 const GameContext = createContext<GameContextProps>({
@@ -24,22 +34,28 @@ const GameContext = createContext<GameContextProps>({
     velocity: 0,
   },
   jump: () => {},
+  gameControls: {
+    pointerLocked: false,
+    cameraOffsetMultiplier: 1,
+  },
 });
 
 export const GameProvider = ({ children }: { children: React.ReactNode }) => {
-  const playerPos = useRef<Vector3>(new Vector3(0, 1, 0));
+  // const playerPos = useRef<Vector3>(new Vector3(0, GROUND_LEVEL, 0)); // start at ground level
+  const playerPos = useRef<Vector3>(new Vector3(0, 20, 0)); // start in air and fall down
   const playerDir = useRef<[number, number, number]>([0, 0, 1]);
   const velocity = useRef(new Vector3(0, 0, 0));
-  const cameraOffset = useRef(new Vector3(0, 0.5, 2));
+  const cameraOffset = useRef(DEFAULT_CAMERA_OFFSET.clone());
 
   // Define state to track if the player is jumping
   const playerJump = useRef({
-    isJumping: false,
-    velocity: 0,
+    isJumping: true, // fall to ground on start
+    velocity: 0.5,
   });
 
   const gameControls = useRef({
     pointerLocked: false,
+    cameraOffsetMultiplier: 1,
   });
 
   // handle pointer lock change
@@ -90,14 +106,11 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (event.type === "keyup") {
         if (event.key === "w" && v.z === 1) {
           v.z = 0;
-        }
-        if (event.key === "s" && v.z === -1) {
+        } else if (event.key === "s" && v.z === -1) {
           v.z = 0;
-        }
-        if (event.key === "a" && v.x === 1) {
+        } else if (event.key === "a" && v.x === 1) {
           v.x = 0;
-        }
-        if (event.key === "d" && v.x === -1) {
+        } else if (event.key === "d" && v.x === -1) {
           v.x = 0;
         }
       }
@@ -121,6 +134,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
         cameraOffset: cameraOffset.current,
         playerJump: playerJump.current,
         jump,
+        gameControls: gameControls.current,
       }}
     >
       {children}

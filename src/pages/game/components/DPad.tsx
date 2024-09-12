@@ -129,7 +129,7 @@ export default function DPad() {
           zIndex: 10,
           opacity: opacity,
           transition: "opacity 0.2s ease-in-out",
-          touchAction: "none", // Ensure touch events don't interfere
+          touchAction: "none",
         }}
       >
         <div

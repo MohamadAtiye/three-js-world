@@ -3,7 +3,14 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGame } from "../gameContext/useGame";
 import { PointerLockControls } from "@react-three/drei";
-import { GRAVITY, GROUND_LEVEL } from "../constants";
+import {
+  DEFAULT_CAMERA_OFFSET,
+  GRAVITY,
+  GROUND_LEVEL,
+  MAX_CAMERA_MULTIPLIER,
+  MIN_CAMERA_MULTIPLIER,
+} from "../constants";
+import { getTouchDistance, isPinch } from "../utils/touchUtils";
 
 const SPEED = 0.1;
 const MIN_PITCH = THREE.MathUtils.degToRad(-60); // Minimum pitch in radians (e.g., -60 degrees)
@@ -12,7 +19,8 @@ const MAX_PITCH = THREE.MathUtils.degToRad(60); // Maximum pitch in radians (e.g
 const TOUCH_SENSITIVITY = 0.004;
 
 export default function Player() {
-  const { playerPos, velocity, cameraOffset, playerJump } = useGame();
+  const { playerPos, velocity, cameraOffset, playerJump, gameControls } =
+    useGame();
   const capsuleRef = useRef<THREE.Mesh>(null);
 
   // reusable vectors
@@ -104,15 +112,43 @@ export default function Player() {
     camera.position.copy(playerPos).add(offset);
   });
 
-  // for touch rotation controls
+  // for wheel zoom and touch rotation controls and zoom //
   const { camera, gl } = useThree();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   // Variables for yaw (Y axis rotation) and pitch (X axis rotation)
   const yawRef = useRef(0); // Horizontal rotation
   const pitchRef = useRef(0); // Vertical rotation
   useEffect(() => {
+    let initialPinchDistance = 0;
+
+    const handleCameraChange = (delta: number) => {
+      gameControls.cameraOffsetMultiplier += delta * 0.005;
+      gameControls.cameraOffsetMultiplier = Math.max(
+        MIN_CAMERA_MULTIPLIER,
+        Math.min(MAX_CAMERA_MULTIPLIER, gameControls.cameraOffsetMultiplier)
+      );
+
+      cameraOffset
+        .set(...DEFAULT_CAMERA_OFFSET.toArray())
+        .multiplyScalar(gameControls.cameraOffsetMultiplier);
+    };
+
+    const onDocumentMouseWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      handleCameraChange(event.deltaY);
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
       event.preventDefault();
+      console.log("touch start", event.touches);
+
+      // check 2 fingers on this canvas for pinching
+      if (isPinch(event)) {
+        console.log("is pinch");
+        initialPinchDistance = getTouchDistance(event.touches);
+        return;
+      }
+
       const touch = Array.from(event.touches).find(
         (t) => t.target === event.currentTarget
       );
@@ -124,6 +160,16 @@ export default function Player() {
 
     const handleTouchMove = (event: TouchEvent) => {
       event.preventDefault();
+
+      // check 2 fingers on this canvas for pinching
+      if (isPinch(event)) {
+        const currentPinchDistance = getTouchDistance(event.touches);
+        const pinchDelta = initialPinchDistance - currentPinchDistance;
+        handleCameraChange(pinchDelta); // Zoom in/out based on pinch gesture
+        initialPinchDistance = currentPinchDistance; // Update for the next move
+        return;
+      }
+
       const touch = Array.from(event.touches).find(
         (t) => t.target === event.currentTarget
       );
@@ -164,14 +210,16 @@ export default function Player() {
     gl.domElement.addEventListener("touchstart", handleTouchStart);
     gl.domElement.addEventListener("touchmove", handleTouchMove);
     gl.domElement.addEventListener("touchend", handleTouchEnd);
+    document.addEventListener("wheel", onDocumentMouseWheel);
 
     // Clean up event listeners on component unmount
     return () => {
       gl.domElement.removeEventListener("touchstart", handleTouchStart);
       gl.domElement.removeEventListener("touchmove", handleTouchMove);
       gl.domElement.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("wheel", onDocumentMouseWheel);
     };
-  }, [camera, gl]);
+  }, [camera, cameraOffset, gameControls, gl]);
 
   return (
     <>
